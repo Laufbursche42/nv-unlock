@@ -76,11 +76,11 @@ const MODELS = {
   '2329':['V50i Pro',0,0], '2334':['S60',1,0], '2345':['ST3 Pro',1,1], '2353':['P50',null,null],
   '2401':['ST3',1,1], '2402':['GT3',1,1], '2403':['GT3 Pro',1,1], '2416':['XT5 Pro',1,1],
   '2417':['E20',1,0], '2418':['GT3 Max',1,1], '2422':['E25',1,0], '2435':['Birdie 3',0,0],
-  '2436':['V25i Pro II',0,0], '2437':['V40i Pro II',0,0], '2438':['V50i Pro II',0,0], '2441':['ST5 Pro',1,1],
-  '2442':['G5',0,0], '2443':['XT5 Ultra',1,1], '2449':['NT5 Ultra X',1,1], '2504':['K100',null,null],
+  '2436':['V25i Pro II',0,0], '2437':['V40i Pro II',1,0], '2438':['V50i Pro II',0,0], '2441':['ST5 Pro',1,1],
+  '2442':['G5',1,1], '2443':['XT5 Ultra',1,1], '2449':['NT5 Ultra X',1,1], '2504':['K100',null,null],
   '2505':['K100 Pro',null,null], '2506':['K100 Max',1,1], '2509':['N65i II',1,1], '2515':['Birdie 3x',0,0],
-  '2517':['ST5 Max',1,1], '2518':['G5 pro',0,0], '2519':['G5 Max',0,0], '2529':['XT5 Max',1,1],
-  '2536':['S2',1,1], '2538':['UT5 Max',null,null], '2543':['NT5 Max',1,1], '2545':['GT5 Pro',1,1],
+  '2517':['ST5 Max',1,1], '2518':['G5 pro',1,1], '2519':['G5 Max',1,1], '2529':['XT5 Max',1,1],
+  '2536':['S2',1,1], '2538':['UT5 Max',1,1], '2543':['NT5 Max',1,1], '2545':['GT5 Pro',1,1],
   '2546':['GT5 Max',1,1], '2547':['UT5 Ultra',null,null], '2573':['E25 Go',1,1], '2585':['UT5 Ultra X',1,1],
   '2611':['E45 Pro',1,1], '2612':['E60 Pro',1,1], '2614':['S2',1,1], '2619':['UT3 Pro',null,null],
   '2620':['UT3 Max',1,1], '2623':['V45i',null,null], '2634':['E20 Lite',1,1], '2643':['E60 Pro',1,1],
@@ -117,10 +117,13 @@ const SPEED = {
           'E60 Pro: up to about 32.5 km/h on a permissive region, otherwise region-limited.'],
 };
 let detectedModel=null, detectedCaps=null, detectedSpeed=null, detectedSku=null, detectedBldcFw=null;   // detectedCaps = [name, cruise, kick]; detectedSpeed = [deHint, enHint] or null; detectedSku = EUR/ITA/USA; detectedBldcFw = controller version string
-// A scooter flashed with our capZ latch firmware reports controller version 5.5.5.6. Those unlock on
-// gear 5 / lock on gear 6 (a non-gear value, so gear changes never re-lock); every other model keeps
-// its stock flash-free lever untouched.
-function isCapZ(){ return detectedBldcFw === '5.5.5.6'; }
+// A scooter flashed with our latch firmware reports a distinct controller version: NT5 5.5.5.6, NT5
+// Max/Ultra 3553G 0.0.5.0 / 0.0.5.5, ST3 Pro 5.5.2.5, NT3 Pro 5.5.5.7, GT3 Pro 5.5.1.7, GT3 5.5.1.1,
+// GT3 Max 6.6.1.1, ST3 7.7.1.1. Those unlock the top gear on gear 5 / lock on gear 6 (a non-gear value,
+// so gear changes never re-lock); every other model keeps its stock flash-free lever untouched. Versions
+// are dotted here (ver() joins the 4 chars with '.'), unlike the app's "5556" form.
+const PATCHED_LATCH_FW = ['5.5.5.6', '0.0.5.0', '0.0.5.5', '5.5.2.5', '5.5.5.7', '5.5.1.7', '5.5.1.1', '6.6.1.1', '7.7.1.1', '5.5.1.5', '5.5.1.3', '8.8.1.1', '1.1.1.5', '1.1.1.6', '1.1.1.7', '2.2.2.5', '2.2.2.4', '3.3.3.5', '6.6.6.5', '7.7.7.5', '9.9.9.1', '4.4.4.9', '9.9.1.1', '8.8.8.4', '0.0.9.0', '0.0.9.9'];
+function isCapZ(){ return PATCHED_LATCH_FW.includes(detectedBldcFw); }
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
@@ -246,7 +249,7 @@ async function handleLogFile(file){
 }
 
 // ---------- BLE ----------
-let device=null, writeCh=null, notifyCh=null, connected=false, authed=false, curKeyIdx=0, autoReadDone=false, lastMaxSpeed=null, usingRandomUid=false, phase2Sent=false, afterAuthDone=false, lastSerialData=null, lastLockState=null;
+let device=null, writeCh=null, notifyCh=null, connected=false, authed=false, curKeyIdx=0, autoReadDone=false, lastMaxSpeed=null, usingRandomUid=false, phase2Sent=false, afterAuthDone=false, lastSerialData=null, lastLockState=null, lastFault=null, faultPollTimer=null;
 // After the challenge/response succeeds the app runs a fixed routine: time sync (0x6F sub 6) then the
 // status reads. We mirror it once per connection.
 async function afterAuth(){
@@ -492,7 +495,12 @@ function decodeRealtime(cmd,f){
   teleSeen();
   if(cmd===0x90){
     const fault=rd(p,0,1), mode=rd(p,1,1), charge=rd(p,2,1), range=rd(p,6,1);
-    if(fault!=null) setTile('fault', fault===0 ? '0 (ok)' : String(fault));
+    if(fault!=null){
+      setTile('fault', fault===0 ? '0 (ok)' : String(fault));
+      // Log every change of the warn/fault byte: this is the value the meter's beep gate reads;
+      // anything not in {0,E,T,U,V,W} makes the continuous beep. Correlate with speed/mode above.
+      if(fault!==lastFault){ lastFault=fault; log('warn/fault code: '+fault+' (0x'+fault.toString(16)+')'+(fault!==0?' - continuous beep unless in {0,E,T,U,V,W}':'')); }
+    }
     if(mode!=null)  setTile('mode', mode);
     if(charge!=null) setTile('batt', charge+' %');
     if(range!=null) setTile('range', range+' km');
@@ -609,7 +617,16 @@ async function readStatus(){
   await sendFrame(readFrame(CMD.READ_BATTERY));// 0x72 -> battery telemetry
   await sleep(300);
   await sendFrame(readFrame(CMD.READ_FW));     // 0x73 -> firmware versions
+  startFaultPoll();
 }
+
+// Poll the homepage report (0x90) once a second so the warn/fault code shows live even when the
+// scooter is not pushing it (it only pushes while riding). decodeRealtime logs the code on change.
+function startFaultPoll(){
+  if(faultPollTimer) return;
+  faultPollTimer = setInterval(() => { if(writeCh && connected) sendFrame(readFrame(0x90)).catch(()=>{}); }, 1000);
+}
+function stopFaultPoll(){ if(faultPollTimer){ clearInterval(faultPollTimer); faultPollTimer=null; } }
 
 // ----- writers -----
 // Direct custom speed limit (0x6B). enabled sets bit7 (limit active).
@@ -751,7 +768,7 @@ async function doDiag(){
 }
 
 
-function onDisconnect(){ connected=false; authed=false; autoReadDone=false; phase2Sent=false; afterAuthDone=false; lastMaxSpeed=null; detectedModel=null; detectedCaps=null; detectedSpeed=null; detectedSku=null; detectedBldcFw=null; writeCh=notifyCh=null; rx=[]; const mt=$('t-model'); if(mt) mt.textContent='-'; setStatus('disconnected'); log('disconnected'); refreshButtons(); resetSettings(); applyModelCaps(); resetTiles(); }
+function onDisconnect(){ stopFaultPoll(); lastFault=null; connected=false; authed=false; autoReadDone=false; phase2Sent=false; afterAuthDone=false; lastMaxSpeed=null; detectedModel=null; detectedCaps=null; detectedSpeed=null; detectedSku=null; detectedBldcFw=null; writeCh=notifyCh=null; rx=[]; const mt=$('t-model'); if(mt) mt.textContent='-'; setStatus('disconnected'); log('disconnected'); refreshButtons(); resetSettings(); applyModelCaps(); resetTiles(); }
 function disconnect(){ if(device&&device.gatt.connected) device.gatt.disconnect(); }
 
 // The connect button stays disabled until we have something to authenticate with: a numeric account
