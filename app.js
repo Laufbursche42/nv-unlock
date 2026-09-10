@@ -435,6 +435,7 @@ function applyModelCaps(){
   // The flash-free notes (tuHint/tuBehavior) do not apply to capZ firmware, hide them there.
   const th=$('tu-hint'); if(th) th.hidden = isCapZ();
   const tb=$('tu-behavior'); if(tb) tb.hidden = isCapZ();
+  updateRegionToggle();   // refresh the unlock/lock buttons once the firmware marker is known
 }
 // Factory reply payload: 55 AA 00 <cmd> <len> <payload...> <cksum> AE AD (payload = len bytes at [5]).
 function factoryPayload(f){ const len=f[4]||0; return f.slice(5, 5+len); }
@@ -691,7 +692,11 @@ function regIsUnlocked(){ const r=curRegion(); return r!=null && r===regUnlockCo
 let speedUnlocked=false;
 function updateRegionToggle(){
   const b=$('btn-regiontoggle'); if(!b) return;
-  b.textContent = speedUnlocked ? (t('btnSpeedLock')||'Zurücksetzen') : (t('btnSpeedUnlock')||'Speed freischalten');
+  const lb=$('btn-speedlock');
+  // Two send-only buttons, no page flag: primary always unlocks, second always locks (value per model
+  // in speedGear). No stale state, so a reload never re-sends the wrong command.
+  b.textContent = t('btnSpeedUnlock')||'Speed freischalten';
+  if(lb){ lb.hidden=false; lb.textContent = t('btnSpeedLock')||'Drossel sperren (22 km/h)'; }
 }
 // Write a 2-letter region code into serial chars 8-9 via the factory 0xA2 config write.
 async function writeRegionCode(code){
@@ -736,9 +741,7 @@ async function doSpeedLock(){
   speedUnlocked=false; updateRegionToggle();
   log('speed lock: gear '+g+' sent -> back to normal drive mode.');
 }
-async function doRegionToggle(){
-  if(speedUnlocked) await doSpeedLock(); else await doSpeedUnlock();
-}
+async function doRegionToggle(){ await doSpeedUnlock(); }   // primary button unlocks; the lock button locks
 async function doRawSend(){
   if(!writeCh){ log('not connected'); return; }
   const bytes = parseHexFrame((($('raw-in')||{}).value)||'');
@@ -783,6 +786,7 @@ function refreshButtons(){
   const on=connected;
   { const c=$('btn-conn'); if(c){ c.textContent = on ? t('btnDisconnect') : t('btnConnect'); c.disabled = false; } }   // userId is optional - Connect is always available
   { const b=$('btn-regiontoggle'); if(b) b.disabled=!on; }
+  { const b=$('btn-speedlock'); if(b) b.disabled=!on; }
   { const b=$('btn-diag'); if(b) b.disabled=!on; }
   { const b=$('btn-raw'); if(b){ b.disabled=!on; const i=$('raw-in'); if(i) i.disabled=!on; } }
   SETTINGS.forEach(s=>{ const b=$(s.btn), sel=$(s.sel); if(b) b.disabled=!on; if(sel) sel.disabled=!on; });
@@ -865,6 +869,7 @@ function clearLog(){ const el=$('log'); if(el) el.textContent=''; }
 function wireControls(){
   $('btn-conn').addEventListener('click', ()=> connected ? disconnect() : connect());
   { const b=$('btn-regiontoggle'); if(b) b.addEventListener('click', doRegionToggle); }
+  { const b=$('btn-speedlock'); if(b) b.addEventListener('click', doSpeedLock); }
   { const b=$('btn-diag'); if(b) b.addEventListener('click', doDiag); }
   { const b=$('btn-raw'); if(b) b.addEventListener('click', doRawSend); }
   ['region-open-in','region-lock-in'].forEach(id=>{ const el=$(id); if(el) el.addEventListener('change', updateRegionToggle); });
