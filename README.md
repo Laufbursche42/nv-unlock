@@ -67,7 +67,7 @@ The five AES-128 keys are built into the app and are identical in 2.1.6; they ar
 - **iOS:** the **Bluefy** browser. Safari and every other iOS browser run on the Safari engine, which has no Web Bluetooth at all.
 - **Android or desktop:** **Chrome** or another Chromium browser. Web Bluetooth is built in.
 
-There is no OTA firmware flashing here. The official app updates firmware over Bluetooth (YModem), this page does not.
+There is no OTA firmware flashing here; this page only controls the scooter. To patch and flash the switchable speed firmware (the lock/unlock you drive here needs it on capped models), use the companion patcher: [nv-fw](https://laufbursche42.github.io/nv-fw/) in Bluefy on iOS or Chrome on desktop, or the [nv-lb-edition](https://github.com/Laufbursche42/nv-lb-edition) Android app, which patches, flashes and controls in one. The official app updates firmware over Bluetooth (YModem); this page does not.
 
 ## Project structure
 

@@ -122,7 +122,7 @@ let detectedModel=null, detectedCaps=null, detectedSpeed=null, detectedSku=null,
 // GT3 Max 6.6.1.1, ST3 7.7.1.1. Those unlock the top gear on gear 5 / lock on gear 6 (a non-gear value,
 // so gear changes never re-lock); every other model keeps its stock flash-free lever untouched. Versions
 // are dotted here (ver() joins the 4 chars with '.'), unlike the app's "5556" form.
-const PATCHED_LATCH_FW = ['5.5.5.6', '0.0.5.0', '0.0.5.5', '5.5.2.5', '5.5.5.7', '5.5.1.7', '5.5.1.1', '6.6.1.1', '7.7.1.1', '5.5.1.5', '5.5.1.3', '8.8.1.1', '1.1.1.5', '1.1.1.6', '1.1.1.7', '2.2.2.5', '2.2.2.4', '3.3.3.5', '6.6.6.5', '7.7.7.5', '9.9.9.1', '4.4.4.9', '9.9.1.1', '8.8.8.4', '0.0.9.0', '0.0.9.9'];
+const PATCHED_LATCH_FW = ['5.5.5.6', '0.0.5.0', '0.0.5.5', '5.5.2.5', '5.5.5.7', '5.5.1.7', '5.5.1.1', '6.6.1.1', '7.7.1.1', '5.5.1.5', '5.5.1.3', '8.8.1.1', '1.1.1.5', '1.1.1.6', '1.1.1.7', '2.2.2.5', '2.2.2.4', '3.3.3.5', '6.6.6.5', '7.7.7.5', '9.9.9.1', '4.4.4.9', '9.9.1.1', '8.8.8.4', '0.0.9.0', '0.0.9.9', '1.1.1.8', '7.7.7.6'];
 function isCapZ(){ return PATCHED_LATCH_FW.includes(detectedBldcFw); }
 
 // ---------- helpers ----------

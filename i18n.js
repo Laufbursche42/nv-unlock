@@ -159,7 +159,7 @@ window.I18N = {
     scFast: "Entsperren: offener Wert",
     scSlow: "Sperren: gedrosselter Wert",
     shortcutIos: "iOS (Bluefy): lege dir eine Verknüpfung auf diese Adresse an.",
-    shortcutAndroid: "Android (Chrome): eine Verknüpfung auf dem Startbildschirm auf diese Adresse.",
+    shortcutAndroid: "Android: nutze die NAVEE-App - dort ist Sperren/Entsperren schon eingebaut, ein Web-Shortcut ist nicht nötig.",
     shortcutNote: "Über eine solche Verknüpfung geöffnet, verbindet sich die Seite mit dem zuletzt genutzten Scooter und setzt die Höchstgeschwindigkeit: Sperren auf den gedrosselten Wert, Entsperren auf den offenen. Der Scooter muss an und in Reichweite sein. Beim ersten Mal einmal normal verbinden, damit der Browser den Scooter merkt.",
 
     s6Title: "Protokoll-Log",
@@ -347,7 +347,7 @@ window.I18N = {
     scFast: "Unlock: open value",
     scSlow: "Lock: throttled value",
     shortcutIos: "iOS (Bluefy): add a shortcut pointing at this address.",
-    shortcutAndroid: "Android (Chrome): a home-screen shortcut pointing at this address.",
+    shortcutAndroid: "Android: use the NAVEE app - lock/unlock is built in there, so no web shortcut is needed.",
     shortcutNote: "Opened through such a shortcut, the page reconnects to the last scooter and sets the top speed: Lock to the throttled value, Unlock to the open one. The scooter has to be on and in range. Connect once normally first so the browser remembers the scooter.",
 
     s6Title: "Protocol log",
