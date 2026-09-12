@@ -130,6 +130,14 @@ const $ = id => document.getElementById(id);
 function log(m){ const el=$('log'); el.textContent += m + '\n'; el.scrollTop = el.scrollHeight; }
 function hex(b){ return [...b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 function hexs(b){ return [...b].map(x=>x.toString(16).padStart(2,'0')).join(' '); }
+// TX log with the account id masked: a 55 AA 00 30 09 .. auth-init frame carries s(userId)
+// (personal data) in bytes 7..12. Shown as XX so a copied/uploaded log never leaks it.
+function hexsTx(b){
+  if(b && b.length>=17 && b[0]===0x55 && b[1]===0xAA && b[3]===0x30 && b[4]===0x09){
+    return [...b].map((x,i)=> (i>=7&&i<=12)?'XX':x.toString(16).padStart(2,'0')).join(' ');
+  }
+  return hexs(b);
+}
 // data-state stays the canonical english key (CSS keys off it); the visible text is translated.
 function setStatus(s){ const el=$('status'); if(!el) return; el.dataset.state=s; const k='st'+s.charAt(0).toUpperCase()+s.slice(1); el.textContent = (typeof t==='function' ? t(k) : '') || s; }
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
@@ -283,7 +291,7 @@ function waitReport(cmd, ms=3000){
 
 async function sendFrame(bytes){
   if(!writeCh) throw new Error('not connected');
-  log('TX '+hexs(bytes));
+  log('TX '+hexsTx(bytes));
   // Match the app: FastBle never forces a write type (BleConnector.q sets no write type), and b002
   // advertises write-without-response (the DFU path explicitly sets NO_RESPONSE on b002), so the app
   // writes control frames as a write COMMAND (no response). The real reply always comes back over the
@@ -598,7 +606,7 @@ async function authenticate(){
   phase2Sent=false; afterAuthDone=false;
   const f=buildInitFrame();
   if(!f){ log('invalid auth hex'); return; }
-  log('auth init (key '+curKeyIdx+', uid '+(usingRandomUid?'random':((($('uid-in')&&$('uid-in').value)||'').trim()))+')');
+  log('auth init (key '+curKeyIdx+', uid '+(usingRandomUid?'random':'set')+')');   // never log the account id in the clear
   await sendFrame(f);   // the 0x30 challenge reply is handled in handleFrame
 }
 // Phase 2: after a good 0x31 the app sends 0x30 once more (fresh keyIdx). Reuses the same userId/hex.
