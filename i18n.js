@@ -20,6 +20,7 @@ window.I18N = {
     btnConnect: "Verbinden",
     btnDisconnect: "Trennen",
     showAll: "Alle Bluetooth-Geräte zeigen (nur falls NAVEE nicht auftaucht)",
+    revealShow: "Eingabe anzeigen",
     controlsHint: "Der Scooter muss an und in Reichweite sein. Er erscheint im Auswahldialog unter seinem Namen (NAVEE...) genau wie in der Hersteller-App und authentifiziert sich automatisch.",
 
     liveTitle: "Status vom Scooter",
@@ -208,6 +209,7 @@ window.I18N = {
     btnConnect: "Connect",
     btnDisconnect: "Disconnect",
     showAll: "Show all Bluetooth devices (only if NAVEE is not listed)",
+    revealShow: "Show the value",
     controlsHint: "The scooter has to be on and in range. It shows up in the chooser by name (NAVEE...), exactly like the manufacturer app, and authenticates automatically.",
 
     liveTitle: "Status from the scooter",

@@ -914,6 +914,9 @@ function wireControls(){
   { const lf=$('log-in'); if(lf) lf.addEventListener('change', ()=>{ const file=lf.files&&lf.files[0]; handleLogFile(file); lf.value=''; }); }
   { const cl=$('btn-clearid'); if(cl) cl.addEventListener('click', e=>{ e.preventDefault(); clearStoredAuth(); }); }
   { const cb=$('unbound'); if(cb) cb.addEventListener('change', ()=>{ if(!connected) refreshButtons(); }); }
+  // Reveal toggles: the userId / auth-frame fields are masked (type=password) so a screenshot does
+  // not leak the account id; the checkbox flips the field visible on demand.
+  document.querySelectorAll('.reveal-cb').forEach(cb=>{ cb.addEventListener('change', ()=>{ const inp=$(cb.dataset.reveal); if(inp) inp.type = cb.checked ? 'text' : 'password'; }); });
 }
 
 // ---------- language ----------
