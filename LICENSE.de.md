@@ -2,7 +2,7 @@
 
 Copyright (c) 2026 Laufbursche (https://github.com/Laufbursche42)
 
-**Laufbursche NAVEE Tool (navee-unlock)** steht unter der
+**Laufbursche NAVEE Tool (nv-unlock)** steht unter der
 **Creative Commons Namensnennung-NichtKommerziell-KeineBearbeitungen 4.0 International Lizenz (CC BY-NC-ND 4.0)**.
 
 - Verständliche Zusammenfassung: https://creativecommons.org/licenses/by-nc-nd/4.0/deed.de

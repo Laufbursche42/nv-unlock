@@ -4,15 +4,15 @@ A static web page that talks to NAVEE scooters over Web Bluetooth. Connect to yo
 
 > **This is a feasibility study.** It exists to show what NAVEE's Bluetooth protocol makes possible, not to be a finished product. The protocol was reconstructed from the official app (com.navee.ucaret 2.1.6) and is documented byte for byte. Error-free operation is not promised and there is no warranty of any kind. Whatever you do with it, you do at your own risk.
 
-**Open the web app: [laufbursche42.github.io/navee-unlock](https://laufbursche42.github.io/navee-unlock/)**
+**Open the web app: [laufbursche42.github.io/nv-unlock](https://laufbursche42.github.io/nv-unlock/)**
 
 **On Android?** There is a native Android app that does the same over Bluetooth, without a browser: **[nv-lb-edition](https://github.com/Laufbursche42/nv-lb-edition)**. It sidesteps the Web Bluetooth quirks - some phones, for example Samsung with Auto Blocker on, block the browser connection. This web page is the way in on iOS.
 
 Or run it yourself, no build step, no dependencies: clone the repo and serve the folder over a local HTTP server. Opening `index.html` directly as a `file://` URL will not work, the page fetches its own documents and browsers block that over `file://`.
 
 ```
-git clone https://github.com/Laufbursche42/navee-unlock.git
-cd navee-unlock
+git clone https://github.com/Laufbursche42/nv-unlock.git
+cd nv-unlock
 python -m http.server 8000
 ```
 
@@ -111,7 +111,7 @@ Enable the git hooks with `git config core.hooksPath .githooks`. New user-facing
 
 Found a problem or want to confirm what works on a real scooter? Send a DM to
 [Laufbursche on escooter-stammtisch](https://www.escooter-stammtisch.de/index.php?user/6497-laufbursche/)
-or open a [GitHub issue](https://github.com/Laufbursche42/navee-unlock/issues). The copy button under the log gives you the full diagnostic transcript to paste in.
+or open a [GitHub issue](https://github.com/Laufbursche42/nv-unlock/issues). The copy button under the log gives you the full diagnostic transcript to paste in.
 
 ## Legal
 
