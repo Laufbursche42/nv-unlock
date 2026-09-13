@@ -31,7 +31,7 @@
 //                                    (BleHandlerDevicePort CountryConfig / BleHandler time sync)
 //   For an XT5 (PID prefix 2782) the app itself offers max speed up to 32 km/h. Values beyond that
 //   are not exercised by the app and depend on what the firmware accepts (hardware test).
-const BUILD = 'v53';
+const BUILD = 'v54';
 // A bound XT5 only authenticates the account it was bound to: the 0x30 init carries the numeric
 // account userId (ByteUtil.s), and the scooter answers a wrong id with errcode 0xFF *before* any
 // challenge (verified against the decompile + a real device log). A random id only works on an
@@ -160,7 +160,7 @@ function s6(userId){
   return b;
 }
 // 0x30 auth-init: payload = [keyIdx, shareFlag, ...s6, 0x00]  (len = 9). shareFlag 0 for a random uid.
-function authInitFrame(userId,keyIdx){ return writeFrame(CMD.AUTH_INIT, [keyIdx, 0x00, ...s6(userId), 0x00]); }
+function authInitFrame(userId,keyIdx,shareFlag){ return writeFrame(CMD.AUTH_INIT, [keyIdx, shareFlag?1:0, ...s6(userId), 0x00]); }
 
 // AES-128-ECB of one 16-byte block (WebCrypto CBC with zero IV == ECB for the first block)
 async function aesEcb16(key16, block16){
@@ -168,7 +168,9 @@ async function aesEcb16(key16, block16){
   const ct = new Uint8Array(await crypto.subtle.encrypt({name:'AES-CBC', iv:new Uint8Array(16)}, k, block16));
   return ct.slice(0,16);
 }
-async function authRespFrame(challenge16,keyIdx){ const ct=await aesEcb16(KEYS[keyIdx], challenge16); return writeFrame(CMD.AUTH_RESP, [...ct]); }
+function xor16(block16, key16){ const o=new Uint8Array(16); for(let i=0;i<16;i++) o[i]=(block16[i]^key16[i])&0xff; return o; }
+// Response mode matches the OEM: for a challenge with a leading mode byte, mode 0 = XOR, else AES.
+async function authRespFrame(block16,keyIdx,useXor){ const ct = useXor ? xor16(block16, KEYS[keyIdx]) : await aesEcb16(KEYS[keyIdx], block16); return writeFrame(CMD.AUTH_RESP, [...ct]); }
 
 function parseHexFrame(s){
   const clean=(s||'').replace(/[^0-9a-fA-F]/g,''); if(clean.length<8||clean.length%2) return null;
@@ -268,6 +270,9 @@ async function afterAuth(){
 // given - the normal commands and the status reads need no auth (meter dispatcher has no auth gate).
 async function afterConnectCommon(){
   await writeTimeSync();
+  // OEM tail of the handshake: after the clock it sends 0x7B, which arms the scooter's 0x90 stream
+  // and keeps the link open. Only on the authed path (a bound scooter needs it).
+  if(authed){ try{ await sendFrame(readFrame(0x7B)); log('sent 0x7B (session arm)'); }catch(e){} }
   autoRead();
   maybeRunDeepAction();
 }
@@ -333,10 +338,14 @@ async function handleFrame(f){
       else log('auth error code '+err);
       return;
     }
-    if(data.length>=16){                   // challenge present -> AES response
-      const challenge=data.slice(data.length-16);
-      log('auth challenge received, responding (key '+curKeyIdx+')');
-      await sendFrame(await authRespFrame(challenge, curKeyIdx));
+    if(data.length>=16){                   // challenge present
+      // OEM: challenge longer than 16 carries a leading mode byte (0 = XOR, else AES) then 16 bytes;
+      // a bare 16-byte challenge has no mode byte and uses AES.
+      let block, useXor;
+      if(data.length>16){ useXor=(data[0]===0); block=data.slice(1,17); }
+      else { useXor=false; block=data.slice(0,16); }
+      log('auth challenge received, responding (key '+curKeyIdx+', '+(useXor?'xor':'aes')+')');
+      await sendFrame(await authRespFrame(block, curKeyIdx, useXor));
     } else {                               // short ack (no challenge) = fully authenticated
       if(!authed){ authed=true; setStatus('connected'); refreshButtons(); log('authenticated'); }
       await afterAuth();                    // time sync + status reads, like the app
@@ -600,7 +609,7 @@ function buildInitFrame(){
     if(uid>2147483647) log(t('logUidRange') || ('note: the account userId is a 32-bit number (max 2147483647); '+raw+' is too large to be a valid userId'));
   } else { uid=AUTO_UID; usingRandomUid=true; }   // no id given -> random (only works on an unbound scooter)
   curKeyIdx=secRandInt(KEYS.length);
-  return authInitFrame(uid,curKeyIdx);
+  return authInitFrame(uid,curKeyIdx,!usingRandomUid);
 }
 async function authenticate(){
   phase2Sent=false; afterAuthDone=false;
