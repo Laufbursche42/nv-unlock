@@ -120,7 +120,7 @@ pre#log { margin: 0; background: var(--field); border: 1px solid var(--line); bo
 .log-ok { color: var(--good); }
 .log-err { color: var(--bad); }
 .foot { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px 0 2px; }
-.foot-links, .footlinks { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; }
+.foot-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; }
 .foot a { color: var(--accent); font-size: 12px; text-decoration: none; }
 .foot a:hover { text-decoration: underline; }
 .foot .ver { color: var(--muted); font-size: 12px; white-space: nowrap; }
