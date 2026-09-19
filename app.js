@@ -31,7 +31,7 @@
 //                                    (BleHandlerDevicePort CountryConfig / BleHandler time sync)
 //   For an XT5 (PID prefix 2782) the app itself offers max speed up to 32 km/h. Values beyond that
 //   are not exercised by the app and depend on what the firmware accepts (hardware test).
-const BUILD = 'v54';
+const BUILD = 'v55';
 // A bound XT5 only authenticates the account it was bound to: the 0x30 init carries the numeric
 // account userId (ByteUtil.s), and the scooter answers a wrong id with errcode 0xFF *before* any
 // challenge (verified against the decompile + a real device log). A random id only works on an
@@ -122,8 +122,11 @@ let detectedModel=null, detectedCaps=null, detectedSpeed=null, detectedSku=null,
 // GT3 Max 6.6.1.1, ST3 7.7.1.1. Those unlock the top gear on gear 5 / lock on gear 6 (a non-gear value,
 // so gear changes never re-lock); every other model keeps its stock flash-free lever untouched. Versions
 // are dotted here (ver() joins the 4 chars with '.'), unlike the app's "5556" form.
-const PATCHED_LATCH_FW = ['5.5.5.6', '0.0.5.0', '0.0.5.5', '5.5.2.5', '5.5.5.7', '5.5.1.7', '5.5.1.1', '6.6.1.1', '7.7.1.1', '5.5.1.5', '5.5.1.3', '8.8.1.1', '1.1.1.5', '1.1.1.6', '1.1.1.7', '2.2.2.5', '2.2.2.4', '3.3.3.5', '6.6.6.5', '7.7.7.5', '9.9.9.1', '4.4.4.9', '9.9.1.1', '8.8.8.4', '0.0.9.0', '0.0.9.9', '1.1.1.8', '7.7.7.6'];
+const PATCHED_LATCH_FW = ['5.5.5.6', '0.0.5.0', '0.0.5.5', '5.5.2.5', '5.5.5.7', '5.5.1.7', '5.5.1.1', '6.6.1.1', '7.7.1.1', '5.5.1.5', '5.5.1.3', '8.8.1.1', '1.1.1.5', '1.1.1.6', '1.1.1.7', '2.2.2.5', '2.2.2.4', '3.3.3.5', '6.6.6.5', '7.7.7.5', '9.9.9.1', '4.4.4.9', '9.9.1.1', '8.8.8.4', '0.0.9.0', '0.0.9.9', '1.1.1.8', '7.7.7.6', '5.5.6.6', '5.0.5.0', '5.0.5.5'];
 function isCapZ(){ return PATCHED_LATCH_FW.includes(detectedBldcFw); }
+// Old NT5 markers: unlock on Turbo nibble 5, so the boost button alone opens full speed. Warn, refuse.
+const OUTDATED_LATCH_FW = ['5.5.5.6', '0.0.5.0', '0.0.5.5'];
+function isCapZOutdated(){ return OUTDATED_LATCH_FW.includes(detectedBldcFw); }
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
@@ -448,7 +451,7 @@ function applyModelCaps(){
   // our capZ latch firmware (isCapZ, controller marker 5.5.5.6).
   const tc=$('tu-card'); const showSpeed = connected && (!!detectedSpeed || isCapZ());
   if(tc) tc.hidden = !showSpeed;
-  const sh=$('tu-model-hint'); if(sh){ sh.textContent = isCapZ() ? t('capzHint') : (detectedSpeed ? detectedSpeed[lang==='en'?1:0] : ''); sh.hidden = !showSpeed; }
+  const sh=$('tu-model-hint'); if(sh){ sh.textContent = isCapZ() ? (isCapZOutdated() ? t('capzOutdated') : t('capzHint')) : (detectedSpeed ? detectedSpeed[lang==='en'?1:0] : ''); sh.classList.toggle('hint-warn', isCapZ() && isCapZOutdated()); sh.hidden = !showSpeed; }
   // The flash-free notes (tuHint/tuBehavior) do not apply to capZ firmware, hide them there.
   const th=$('tu-hint'); if(th) th.hidden = isCapZ();
   const tb=$('tu-behavior'); if(tb) tb.hidden = isCapZ();
@@ -746,6 +749,15 @@ function speedGear(open){ if(isCapZ()) return open ? 5 : 6; const nt=/^NT/i.test
 // would be dropped.
 async function doSpeedUnlock(){
   if(!writeCh){ log('not connected'); return; }
+  if(isCapZ()){
+    if(isCapZOutdated()){ log('outdated firmware ('+detectedBldcFw+') - unlock disabled, it is bypassable at the scooter boost button. Rebuild and flash the current firmware on nv-fw.'); updateRegionToggle(); return; }
+    await writeToggle(0x58, 7);        // app-only unlock (nibble 7); no physical control emits it
+    await sleep(600);
+    await writeToggle(0x58, 3);        // back to a normal gear; ceiling stays raised
+    speedUnlocked=true; updateRegionToggle();
+    log('speed unlock: top-gear ceiling raised. Now press the boost button on the scooter to use it. A restart locks it back to 22.');
+    return;
+  }
   const g=speedGear(true);
   await writeToggle(0x58, g);
   speedUnlocked=true; updateRegionToggle();
