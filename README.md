@@ -1,3 +1,5 @@
+> 🚨 **This tool is moving.** This repository is **no longer maintained** - please switch to the new tool: **[lb-tool-web.laufbursche.workers.dev](https://lb-tool-web.laufbursche.workers.dev/)**. Trouble switching? Open an [issue on GitHub](https://github.com/Laufbursche42/Laufbursche42/issues/new) or send a [PM on the eScooter-Stammtisch forum](https://www.escooter-stammtisch.de/index.php?user/6497-laufbursche/).
+
 # Laufbursche NAVEE unlock
 
 A static web page that talks to NAVEE scooters over Web Bluetooth. Connect to your scooter, it authenticates itself, reads the status, detects your model from the serial and shows the drive functions that model's firmware supports: immobilizer, cruise control and zero-start. On four families it also lifts the top speed with a flash-free gear lever (no firmware flashing). Nothing to install: no app store, no signing, no developer account. It runs in **Bluefy** on iOS and in **Chrome** on Android or desktop. The page is bilingual (German/English, switch in the header).
