@@ -31,7 +31,7 @@
 //                                    (BleHandlerDevicePort CountryConfig / BleHandler time sync)
 //   For an XT5 (PID prefix 2782) the app itself offers max speed up to 32 km/h. Values beyond that
 //   are not exercised by the app and depend on what the firmware accepts (hardware test).
-const BUILD = 'v56';
+const BUILD = 'v57';
 // A bound XT5 only authenticates the account it was bound to: the 0x30 init carries the numeric
 // account userId (ByteUtil.s), and the scooter answers a wrong id with errcode 0xFF *before* any
 // challenge (verified against the decompile + a real device log). A random id only works on an
@@ -127,6 +127,9 @@ function isCapZ(){ return PATCHED_LATCH_FW.includes(detectedBldcFw); }
 // Old NT5 markers: unlock on Turbo nibble 5, so the boost button alone opens full speed. Warn, refuse.
 const OUTDATED_LATCH_FW = ['5.5.5.6', '0.0.5.0', '0.0.5.5'];
 function isCapZOutdated(){ return OUTDATED_LATCH_FW.includes(detectedBldcFw); }
+// Models the patcher enables but that are not yet confirmed on recoverable hardware.
+const EXPERIMENTAL_MODELS = ['ST3 Pro', 'GT3 Pro', 'ST3', 'GT3', 'GT3 Max'];
+function isExperimentalModel(){ return EXPERIMENTAL_MODELS.indexOf(detectedModel) >= 0; }
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
@@ -447,6 +450,8 @@ function applyModelCaps(){
   if(fm) fm.textContent = connected
     ? (detectedModel ? t('fnModel').replace('%s', detectedModel) : t('fnModelUnknown'))
     : t('fnConnect');
+  // Untested model: warn when an unconfirmed (experimental) scooter is connected.
+  const un=$('fn-untested'); if(un){ un.hidden = !(connected && isExperimentalModel()); un.textContent = un.hidden ? '' : t('untestedScooter'); }
   // Speed card (gear lever): the four flash-free families (detectedSpeed), plus any scooter running
   // our capZ latch firmware (isCapZ, controller marker 5.5.5.6).
   const tc=$('tu-card'); const showSpeed = connected && (!!detectedSpeed || isCapZ());
@@ -749,6 +754,7 @@ function speedGear(open){ if(isCapZ()) return open ? 5 : 6; const nt=/^NT/i.test
 // would be dropped.
 async function doSpeedUnlock(){
   if(!writeCh){ log('not connected'); return; }
+  if(isExperimentalModel() && !confirm(t('untestedConfirm'))) return;
   if(isCapZ()){
     if(isCapZOutdated()){ log('outdated firmware ('+detectedBldcFw+') - unlock disabled, it is bypassable at the scooter boost button. Rebuild and flash the current firmware on nv-fw.'); updateRegionToggle(); return; }
     await writeToggle(0x58, 7);        // app-only unlock (nibble 7); no physical control emits it
