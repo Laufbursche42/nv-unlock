@@ -31,7 +31,7 @@
 //                                    (BleHandlerDevicePort CountryConfig / BleHandler time sync)
 //   For an XT5 (PID prefix 2782) the app itself offers max speed up to 32 km/h. Values beyond that
 //   are not exercised by the app and depend on what the firmware accepts (hardware test).
-const BUILD = 'v57';
+const BUILD = 'v58';
 // A bound XT5 only authenticates the account it was bound to: the 0x30 init carries the numeric
 // account userId (ByteUtil.s), and the scooter answers a wrong id with errcode 0xFF *before* any
 // challenge (verified against the decompile + a real device log). A random id only works on an
@@ -133,7 +133,7 @@ function isExperimentalModel(){ return EXPERIMENTAL_MODELS.indexOf(detectedModel
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
-function log(m){ const el=$('log'); el.textContent += m + '\n'; el.scrollTop = el.scrollHeight; }
+function log(m){ const el=$('log'); el.textContent += '[' + new Date().toTimeString().slice(0, 8) + '] ' + m + '\n'; el.scrollTop = el.scrollHeight; }
 function hex(b){ return [...b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 function hexs(b){ return [...b].map(x=>x.toString(16).padStart(2,'0')).join(' '); }
 // TX log with the account id masked: a 55 AA 00 30 09 .. auth-init frame carries s(userId)
@@ -202,6 +202,26 @@ function scanAuthFrame(bytes){
   }
   return found;
 }
+
+// Load-time protocol self-test: the frame builders must reproduce a known-good byte vector and every
+// built frame must re-validate through the page's own checksum/validator. Runs once at load.
+//  - KNOWN-VECTOR: writeFrame(0x58,[0x04]) must equal the field-confirmed gear-4 command
+//    55 AA 00 58 01 04 5C FE FD (observed on the write char, confirmed on device).
+//  - ROUND-TRIP: scanAuthFrame (the 0x30 validator) must accept authInitFrame output and return it
+//    byte-for-byte, i.e. builder checksum + FE FD terminator satisfy the validator; and readFrame's
+//    checksum must equal a fresh ckSum over its body.
+const FRAME_OK = (function(){
+  const eq = (a,b) => !!a && !!b && a.length===b.length && a.every((v,i)=>(v&0xff)===(b[i]&0xff));
+  const KNOWN_GEAR4 = [0x55,0xAA,0x00,0x58,0x01,0x04,0x5C,0xFE,0xFD];     // confirmed on device
+  const vec = eq(writeFrame(0x58,[0x04]), KNOWN_GEAR4);
+  const ai = authInitFrame(12345,1,true);
+  const roundTrip = eq(scanAuthFrame(ai), ai);
+  const rd = readFrame(CMD.READ_SN);
+  const readCk = rd[4] === ckSum([0x55,0xAA,0x00,CMD.READ_SN]);
+  return vec && roundTrip && readCk;
+})();
+if(!FRAME_OK) try{ console.error('nv-unlock protocol self-test FAILED: frame builder/validator mismatch'); }catch(e){}
+
 async function tryDecompress(bytes, fmt){
   try{
     if(typeof DecompressionStream!=='function') return null;
@@ -385,7 +405,7 @@ async function handleFrame(f){
 function rd(p,off,len,z2){ if(off+len>p.length) return null; if(len===1) return p[off]&0xff; let b=[...p.slice(off,off+len)]; if(!z2) b=b.reverse(); let v=0; for(const x of b) v=v*256+(x&0xff); return v; }
 // set a telemetry tile: fill value and reveal its wrapper (report-gated)
 function setTile(key,val){ const b=$('tv-'+key), w=$('tile-'+key); if(b) b.textContent=val; if(w) w.hidden=false; }
-function resetTiles(){ document.querySelectorAll('#tele-card .tile').forEach(el=>el.hidden=true); const e=$('tele-empty'); if(e) e.hidden=false; }
+function resetTiles(){ document.querySelectorAll('#batt-card .tile').forEach(el=>el.hidden=true); const e=$('tele-empty'); if(e) e.hidden=false; }
 function teleSeen(){ const e=$('tele-empty'); if(e) e.hidden=true; }
 
 // Full vehicle param report (cmd 0x70). Offsets are into the DATA block (byte[6]+), taken
@@ -444,7 +464,7 @@ function applyModelCaps(){
   set('zero',   detectedCaps ? detectedCaps[2] : null);
   // Zero-start levels 0-2 (ride off without pushing) are USA-SKU only; the meter clamps them to 3
   // elsewhere. Hide them on non-USA units; the row still offers 3-5 (push-off threshold). Verified:
-  // meter clamp FUN_08014230, start-speed USA gate in navee_gesamtanalyse.md.
+  // meter clamp FUN_08014230, start-speed USA gate verified in the meter firmware.
   const zsel=$('zero-in'); if(zsel) zsel.querySelectorAll('option').forEach(o=>{ if(parseInt(o.value,10)<3) o.hidden=(detectedSku!=='USA'); });
   const fm=$('fn-model');
   if(fm) fm.textContent = connected
@@ -501,6 +521,9 @@ function decodeBattery(f){
   if(health!=null) setTile('health', health+' %');
   if(temp!=null)   setTile('temp', temp+' C');
   if(cyc!=null)    setTile('cycles', cyc);
+  // Battery production date: DeviceBatteryInfo formats bytes 25/26/27 as "20%02d-%02d-%02d" (BleHandler.java:478-511)
+  const gy=rd(p,25,1), gm=rd(p,26,1), gd=rd(p,27,1), pad=n=>String(n).padStart(2,'0');
+  if(gy!=null && gm!=null && gd!=null && (gy||gm||gd)) setTile('gendate', '20'+pad(gy)+'-'+pad(gm)+'-'+pad(gd));
   log('battery: charge='+charge+' volt(raw)='+volt+' health='+health+' temp='+temp+' cycles='+cyc);
   log('raw battery data: '+hexs(p));
 }
@@ -531,14 +554,25 @@ function decodeRealtime(cmd,f){
     if(charge!=null) setTile('batt', charge+' %');
     if(range!=null) setTile('range', range+' km');
   } else if(cmd===0x91){
-    const spd=rd(p,2,1), range=rd(p,3,1), total=rd(p,8,1);
+    // DeviceSubPageInfo v0, all u8 (BleHandler.java:633-646): remain/trip mileage km, duration min, max/avg km/h
+    const spd=rd(p,2,1), range=rd(p,3,1), tripd=rd(p,4,1), tript=rd(p,5,1), tmax=rd(p,6,1), tavg=rd(p,7,1), total=rd(p,8,1);
     if(spd!=null) setTile('speed', spd+' km/h');
     if(range!=null) setTile('range', range+' km');
+    if(tripd!=null) setTile('tripdist', tripd+' km');
+    if(tript!=null) setTile('triptime', tript+' min');
+    if(tmax!=null) setTile('tripmax', tmax+' km/h');
+    if(tavg!=null) setTile('tripavg', tavg+' km/h');
     if(total!=null) setTile('total', total+' km');
   } else if(cmd===0x92){
-    const spd=rd(p,2,2,false), total=rd(p,12,2,false);
+    // DeviceSubPageInfo v1 (BleHandler.java:647-663): speed/max/avg/total are 0.1-units, displayed /10
+    // (C() BleHandler.java:226-229, totalMileageValue() DeviceSubPageInfo.java:130-133); duration u8 min
+    const spd=rd(p,2,2,false), range=rd(p,4,1), tript=rd(p,7,1), tmax=rd(p,8,2,false), tavg=rd(p,10,2,false), total=rd(p,12,2,false);
     if(spd!=null) setTile('speed', (spd/10).toFixed(1)+' km/h');
-    if(total!=null) setTile('total', total+' km');
+    if(range!=null) setTile('range', range+' km');
+    if(tript!=null) setTile('triptime', tript+' min');
+    if(tmax!=null) setTile('tripmax', (tmax/10).toFixed(1)+' km/h');
+    if(tavg!=null) setTile('tripavg', (tavg/10).toFixed(1)+' km/h');
+    if(total!=null) setTile('total', (total/10).toFixed(1)+' km');
   }
 }
 
@@ -822,9 +856,10 @@ function refreshButtons(){
   { const c=$('btn-conn'); if(c){ c.textContent = on ? t('btnDisconnect') : t('btnConnect'); c.disabled = false; } }   // userId is optional - Connect is always available
   { const b=$('btn-regiontoggle'); if(b) b.disabled=!on; }
   { const b=$('btn-speedlock'); if(b) b.disabled=!on; }
-  { const b=$('btn-diag'); if(b) b.disabled=!on; }
   { const b=$('btn-raw'); if(b){ b.disabled=!on; const i=$('raw-in'); if(i) i.disabled=!on; } }
   SETTINGS.forEach(s=>{ const b=$(s.btn), sel=$(s.sel); if(b) b.disabled=!on; if(sel) sel.disabled=!on; });
+  // telemetry + settings cards stay hidden until connected; on load only intro/connect/log show
+  ['live-card','batt-card','more-card','raw-card'].forEach(id=>{ const el=$(id); if(el) el.hidden=!on; });
 }
 // Forget the stored login: the userId, the extracted/pasted auth frame and the remembered scooter.
 // Everything lives only in this browser's localStorage; nothing is on any server.
@@ -899,19 +934,40 @@ function copyLog(){
 function fallbackCopy(text, done){
   try{ const ta=document.createElement('textarea'); ta.value=text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); if(done) done(); }catch(e){ log('copy failed'); }
 }
-function clearLog(){ const el=$('log'); if(el) el.textContent=''; }
+function logDiagnosticHeader(){
+  log('=== nv-unlock diagnostic ===');
+  log('build: '+BUILD);
+  log('time: '+new Date().toISOString());
+  log('userAgent: '+(navigator.userAgent||'?'));
+  log('platform: '+(navigator.platform||'?'));
+  log('webBluetooth: '+(navigator.bluetooth?'yes':'no'));
+  log('protocol self-test: '+(FRAME_OK?'OK':'FAILED'));
+  log('================================');
+}
+function clearLog(){ const el=$('log'); if(el) el.textContent=''; logDiagnosticHeader(); }
+// Save the log to a text file, with the same OS-aware line endings as copy.
+function saveLog(){
+  try{
+    const el=$('log'); const text=((el&&el.textContent)||'').replace(/\r?\n/g, osNewline());
+    const blob=new Blob([text], {type:'text/plain'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='laufbursche42-navee-log.txt';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }catch(e){ log('save failed: '+(e&&e.message||e)); }
+}
 
 function wireControls(){
   $('btn-conn').addEventListener('click', ()=> connected ? disconnect() : connect());
   { const b=$('btn-regiontoggle'); if(b) b.addEventListener('click', doRegionToggle); }
   { const b=$('btn-speedlock'); if(b) b.addEventListener('click', doSpeedLock); }
-  { const b=$('btn-diag'); if(b) b.addEventListener('click', doDiag); }
   { const b=$('btn-raw'); if(b) b.addEventListener('click', doRawSend); }
   ['region-open-in','region-lock-in'].forEach(id=>{ const el=$(id); if(el) el.addEventListener('change', updateRegionToggle); });
   ['open-in','locked-in'].forEach(id=>{ const el=$(id); if(el) el.addEventListener('change', persistDrossel); });
   SETTINGS.forEach(s=>{ const b=$(s.btn); if(b) b.addEventListener('click', ()=>{ const el=s.sel?$(s.sel):null; s.send(el?(parseInt(el.value||'0',10)||0):0); }); });
   $('btn-copy-log').addEventListener('click', copyLog);
   $('btn-clear-log').addEventListener('click', clearLog);
+  { const b=$('btn-save-log'); if(b) b.addEventListener('click', saveLog); }
   // Account userId: prefill from storage, remember on edit, and gate the connect button on it.
   // Smart paste: a whole login response -> pull the userId out of it; a pasted 0x30 auth frame ->
   // it is NOT the numeric userId (the id sits hex-encoded inside it), so route it to the Auth-frame
@@ -1078,6 +1134,7 @@ function wireDocViewer(){
 // ---------- help modal ----------
 const HELP = {
   fn:       ['fnHelpTitle', 'fnHelp'],
+  batt:     ['help_batt_t', 'help_batt_b'],
   logupload:['logUploadTitle', 'logUploadHelp'],
   more:    ['moreTitle', 'moreHelp'],
   country: ['s4Title', 'countryHelp'],
@@ -1135,5 +1192,5 @@ wireHelp();
 applyLang();
 parseDeepLink();
 tryAutoReconnect();
-log('NAVEE unlock '+BUILD);
+logDiagnosticHeader();
 if(!('bluetooth' in navigator)) log('Web Bluetooth not available - use Chrome (Android/desktop) or Bluefy (iOS).');
