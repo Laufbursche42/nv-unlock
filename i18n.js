@@ -188,7 +188,6 @@ window.I18N = {
 
     footGuide: "Anleitung",
     footDisclaimer: "Haftungsausschluss",
-    disclaimerText: "<p>Dieses Werkzeug ist eine Machbarkeitsstudie, kein fertiges Produkt. Es gibt keine Gewährleistung und keine Garantie für fehlerfreien Betrieb.</p><p><b>Das Anheben der Geschwindigkeit hebt die Drossel auf:</b></p><ul><li>Die ABE erlischt und der Betrieb auf öffentlichen Wegen ist dann nicht erlaubt.</li><li>Es drohen die entsprechenden Folgen für Versicherung sowie Zulassung.</li></ul><p>Nutzung ausschließlich am eigenen Fahrzeug und auf eigenes Risiko. Die Seite spricht nur lokal per Bluetooth mit dem Gerät, es werden keine Daten an einen Server gesendet.</p><p>NAVEE ist eine Marke des jeweiligen Inhabers. Dieses Projekt ist unabhängig und nicht mit NAVEE verbunden.</p>",
     footSource: "Quellcode",
     footIssue: "Fehler melden",
     footReadme: "Readme",
@@ -395,7 +394,6 @@ window.I18N = {
 
     footGuide: "Guide",
     footDisclaimer: "Disclaimer",
-    disclaimerText: "<p>This tool is a feasibility study, not a finished product. There is no warranty and no guarantee of error-free operation.</p><p><b>Raising the speed removes the throttle:</b></p><ul><li>The type approval becomes void and riding on public roads is then not allowed.</li><li>This carries the corresponding insurance and registration consequences.</li></ul><p>Use it only on your own vehicle and at your own risk. The page talks to the device locally over Bluetooth only, no data is sent to any server.</p><p>NAVEE is a trademark of its respective owner. This project is independent and not affiliated with NAVEE.</p>",
     footSource: "Source",
     footIssue: "Report an issue",
     footReadme: "Readme",

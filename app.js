@@ -31,7 +31,7 @@
 //                                    (BleHandlerDevicePort CountryConfig / BleHandler time sync)
 //   For an XT5 (PID prefix 2782) the app itself offers max speed up to 32 km/h. Values beyond that
 //   are not exercised by the app and depend on what the firmware accepts (hardware test).
-const BUILD = 'v60';
+const BUILD = 'v61';
 // A bound XT5 only authenticates the account it was bound to: the 0x30 init carries the numeric
 // account userId (ByteUtil.s), and the scooter answers a wrong id with errcode 0xFF *before* any
 // challenge (verified against the decompile + a real device log). A random id only works on an
@@ -1015,6 +1015,7 @@ function applyLang(){
   const li=$('link-license'); if(li) li.href=docFile('LICENSE');
   const pr=$('link-privacy'); if(pr) pr.href=docFile('PRIVACY');
   const tm=$('link-trademarks'); if(tm) tm.href=docFile('TRADEMARKS');
+  const dc=$('link-disclaimer'); if(dc) dc.href=docFile('DISCLAIMER');
   const ls=$('langs'); if(ls) ls.setAttribute('aria-label', t('langGroup'));
   const bv=$('build-ver'); if(bv) bv.textContent=t('buildLabel')+' '+BUILD;
   document.querySelectorAll('#langs button').forEach(b=> b.setAttribute('aria-pressed', String(b.dataset.lang===lang)));
@@ -1048,6 +1049,7 @@ const DOC_TITLES = {
   'PRIVACY.de.md':'footPrivacy','PRIVACY.md':'footPrivacy',
   'LICENSE.de.md':'footLicense','LICENSE.md':'footLicense',
   'TRADEMARKS.de.md':'footTrademarks','TRADEMARKS.md':'footTrademarks',
+  'DISCLAIMER.de.md':'footDisclaimer','DISCLAIMER.md':'footDisclaimer',
   'README.md':'footReadme',
 };
 const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1141,15 +1143,14 @@ const HELP = {
   country: ['s4Title', 'countryHelp'],
   account: ['accountTitle', 'accountHelp'],
   authhex: ['authhexTitle', 'authhexHelp'],
-  disclaimer: ['footDisclaimer', 'disclaimerText'],
 };
-function openHelp(key){ const m=HELP[key]; if(!m) return; const dlg=$('help'); if(!dlg) return; $('help-title').textContent=t(m[0]); $('help-body').innerHTML=t(m[1]); if(typeof dlg.showModal==='function') dlg.showModal(); } // scan-ok: HELP is a static developer-authored map, m[1] is always one of our own i18n body strings (moreHelp/countryHelp/accountHelp/authhexHelp/disclaimerText), no user input reaches it; same trusted-i18n case as the data-t line above
+function openHelp(key){ const m=HELP[key]; if(!m) return; const dlg=$('help'); if(!dlg) return; $('help-title').textContent=t(m[0]); $('help-body').innerHTML=t(m[1]); if(typeof dlg.showModal==='function') dlg.showModal(); } // scan-ok: HELP is a static developer-authored map, m[1] is always one of our own i18n body strings (moreHelp/countryHelp/accountHelp/authhexHelp), no user input reaches it; same trusted-i18n case as the data-t line above
 function closeHelp(){ const d=$('help'); if(d&&d.close) d.close(); }
 function wireHelp(){
   document.querySelectorAll('.help-btn').forEach(b=> b.addEventListener('click', ()=> openHelp(b.getAttribute('data-help'))));
   ['help-x','help-close'].forEach(id=>{ const b=$(id); if(b) b.addEventListener('click', closeHelp); });
-  const dis=$('link-disclaimer'); if(dis) dis.addEventListener('click', e=>{ e.preventDefault(); openHelp('disclaimer'); });
-  document.addEventListener('click', e=>{ if(e.target.closest && e.target.closest('[data-open-disclaimer]')){ e.preventDefault(); openHelp('disclaimer'); } });
+  const dis=$('link-disclaimer'); if(dis) dis.addEventListener('click', e=>{ e.preventDefault(); openDocFile(docFile('DISCLAIMER'),'','footDisclaimer'); });
+  document.addEventListener('click', e=>{ if(e.target.closest && e.target.closest('[data-open-disclaimer]')){ e.preventDefault(); openDocFile(docFile('DISCLAIMER'),'','footDisclaimer'); } });
 }
 
 // ---------- home-screen shortcuts (deep link ?do=fast|slow, like sf-unlock) ----------
