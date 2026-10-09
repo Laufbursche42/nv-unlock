@@ -31,7 +31,7 @@
 //                                    (BleHandlerDevicePort CountryConfig / BleHandler time sync)
 //   For an XT5 (PID prefix 2782) the app itself offers max speed up to 32 km/h. Values beyond that
 //   are not exercised by the app and depend on what the firmware accepts (hardware test).
-const BUILD = 'v59';
+const BUILD = 'v60';
 // A bound XT5 only authenticates the account it was bound to: the 0x30 init carries the numeric
 // account userId (ByteUtil.s), and the scooter answers a wrong id with errcode 0xFF *before* any
 // challenge (verified against the decompile + a real device log). A random id only works on an
@@ -997,6 +997,7 @@ function wireControls(){
   { const lf=$('log-in'); if(lf) lf.addEventListener('change', ()=>{ const file=lf.files&&lf.files[0]; handleLogFile(file); lf.value=''; }); }
   { const cl=$('btn-clearid'); if(cl) cl.addEventListener('click', e=>{ e.preventDefault(); clearStoredAuth(); }); }
   { const cb=$('unbound'); if(cb) cb.addEventListener('change', ()=>{ if(!connected) refreshButtons(); }); }
+  { const sa=$('showall'); if(sa) sa.addEventListener('change', ()=>{ log('show-all-frames: ' + (sa.checked ? 'on' : 'off')); }); }
   // Reveal toggles: the userId / auth-frame fields are masked (type=password) so a screenshot does
   // not leak the account id; the checkbox flips the field visible on demand.
   document.querySelectorAll('.reveal-cb').forEach(cb=>{ cb.addEventListener('change', ()=>{ const inp=$(cb.dataset.reveal); if(inp) inp.type = cb.checked ? 'text' : 'password'; }); });
