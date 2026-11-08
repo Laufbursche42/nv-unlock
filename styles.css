@@ -96,6 +96,11 @@
   ::-webkit-scrollbar-corner { background: transparent; }
 }
 
+/* Reserve the scrollbar gutter at the viewport so toggling body.sunset-locked
+   (overflow:hidden on load, cleared on dismiss) never adds or removes the scrollbar
+   width -> no horizontal reflow / layout shift. */
+html { scrollbar-gutter: stable; }
+
 body {
   margin: 0; background: var(--bg); color: var(--text);
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.45;
@@ -475,7 +480,11 @@ a.dl:hover { text-decoration: none; filter: brightness(1.05); }
 
 .sunset-box { max-width: 460px; width: 100%; background: var(--card); border: 1px solid var(--bad-line);
   border-radius: 14px; padding: 22px 22px 20px; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
-  color: var(--text); }
+  color: var(--text);
+  /* Reserve the box height so it can never collapse and then grow (the content is
+     statically prefilled in the HTML, so this is a gap-free floor below the natural
+     height - it only guards the degenerate empty state, it never adds whitespace). */
+  min-height: 13.5rem; box-sizing: border-box; }
 
 .sunset-title { margin: 0 0 10px; font-size: 18px; line-height: 1.3; color: var(--bad-strong); }
 
