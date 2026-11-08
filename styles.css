@@ -452,6 +452,21 @@ a.dl:hover { text-decoration: none; filter: brightness(1.05); }
 /* Warnhinweis als formatierte Liste statt Fliesstext. */
 .warn .warn-title { display: block; margin-bottom: 6px; color: var(--warn-strong); font-weight: 700; }
 
+/* Deprecation banner: red tone, shown on load, dismissable via the X. Kept in
+   addition to the full-page gate overlay below. */
+.sunset-banner { position: relative; background: var(--bad-bg); border: 1px solid var(--bad-line); border-radius: 10px;
+  padding: 11px 36px 11px 14px; font-size: 12px; line-height: 1.5; color: var(--text); }
+.sunset-banner[hidden] { display: none; }
+
+.sunset-banner b { color: var(--bad-strong); }
+
+.sunset-banner a { color: var(--bad-strong); text-decoration: underline; }
+
+.sunset-x { position: absolute; top: 6px; right: 8px; width: 24px; height: 24px; padding: 0;
+  border: 1px solid var(--bad-line); border-radius: 6px; background: transparent; color: var(--bad-strong);
+  font-size: 18px; line-height: 1; cursor: pointer; }
+.sunset-x:hover { background: var(--bad-line); }
+
 /* Deprecation gate: full-page opaque overlay shown on load; the page behind it is
    hidden and the user must dismiss the overlay before using it. */
 .sunset-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center;
